@@ -55,5 +55,77 @@ public class ProductController {
                             .toList()
             );
         }
+        // POST /products -> Permite agregar un nuevo producto o repuesto en el inventario y a la venta
+        @PostMapping
+        public ResponseEntity<?> createProduct(@RequestBody Map<String, Object> body) {
+            try {
+                // Validar campos requeridos usando Guava
+                String name = (String) body.get("name");
+                // Validar nombre con ValidationService
+                try {
+                    validationService.validateProductName(name);
+                } catch (IllegalArgumentException e) {
+                    return ResponseEntity.badRequest().body(
+                            Map.of("error", e.getMessage())
+                    );
+                }
+                Object priceObj = body.get("price");
+                // Crear nuevo producto
+                Product product = new Product();
+                product.setName(name.trim());
+                // Convertir price a Double
+                Double price;
+                if (priceObj instanceof Number) {
+                    price = ((Number) priceObj).doubleValue();
+                } else {
+                    try {
+                        price = Double.parseDouble(priceObj.toString());
+                    } catch (NumberFormatException e) {
+                        return ResponseEntity.badRequest().body(
+                                Map.of("error", "El precio debe ser un número válido")
+                        );
+                    }
+                }
+                product.setPrice(price);
+                // Campos opcionales
+                String description = (String) body.get("description");
+                if (description != null && !description.trim().isEmpty()) {
+                    product.setDescription(description.trim());
+                }
+                String imageUrl = (String) body.get("imageUrl");
+                if (imageUrl != null && !imageUrl.trim().isEmpty()) {
+                    product.setImageUrl(imageUrl.trim());
+                }
+                // Category (opcional)
+                String category = (String) body.get("category");
+                if (category != null && !category.trim().isEmpty()) {
+                    product.setCategory(category.trim());
+                }
+                // Stock inicial (por defecto 0)
+                Object stockObj = body.get("stock");
+                if (stockObj != null) {
+                    Integer stock;
+                    if (stockObj instanceof Number) {
+                        stock = ((Number) stockObj).intValue();
+                    } else {
+                        try {
+                            stock = Integer.parseInt(stockObj.toString());
+                        } catch (NumberFormatException e) {
+                            stock = 0;
+                        }
+                    }
+                    product.setStock(stock);
+                } else {
+                    product.setStock(0);
+                }
+                // Guardar producto
+                Product savedProduct = productRepository.save(product);
+                return ResponseEntity.ok(savedProduct);
+            } catch (Exception e) {
+                return ResponseEntity.status(500).body(
+                        Map.of("error", "Error al crear el producto: " + e.getMessage())
+                );
+            }
+        }
 }
 
