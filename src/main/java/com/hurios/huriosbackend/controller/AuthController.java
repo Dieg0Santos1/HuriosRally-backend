@@ -36,3 +36,20 @@ public class AuthController {
             return ResponseEntity.badRequest().body(Map.of("error", e.getMessage()));
         }
     }
+
+    // POST /auth/login
+    // body: { "email": "...", "password": "...", "role": "CLIENTE" o "ADMINISTRADOR" }
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@RequestBody Map<String, String> body) {
+        String email = body.get("email");
+        String password = body.get("password");
+        String role = body.get("role"); // CLIENTE o ADMINISTRADOR
+        Map<String, Object> res = authService.login(email, password, role);
+        // authService comunica ok:false con message si falla
+        boolean ok = Boolean.TRUE.equals(res.get("ok"));
+        if (!ok) {
+            // 401 para credenciales inválidas o usuario no encontrado
+            return ResponseEntity.status(401).body(res);
+        }
+        return ResponseEntity.ok(res);
+    }
