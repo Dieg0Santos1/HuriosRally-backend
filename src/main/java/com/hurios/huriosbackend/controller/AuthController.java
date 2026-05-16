@@ -65,4 +65,18 @@ public class AuthController {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
+
+    // POST /auth/verify-code
+    // body: { "email": "...", "code": "123456" }
+    @PostMapping("/verify-code")
+    public ResponseEntity<?> verifyCode(@RequestBody Map<String,String> body) {
+        String email = body.get("email");
+        String code = body.get("code");
+        String msg = authService.verifyCode(email, code);
+        if ("Email verificado".equals(msg)) {
+            return ResponseEntity.ok(Map.of("message", msg));
+        }
+        return ResponseEntity.badRequest().body(Map.of("error", msg));
+    }
+
 }
