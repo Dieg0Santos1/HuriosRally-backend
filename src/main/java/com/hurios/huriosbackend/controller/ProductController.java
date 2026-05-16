@@ -196,5 +196,26 @@ public class ProductController {
                 );
             }
         }
+        // DELETE /products/{id} ->Sirve para eliminar un producto estableciendo su ID
+        @DeleteMapping("/{id}")
+        public ResponseEntity<?> deleteProduct(@PathVariable Long id) {
+            Optional<Product> maybe = productRepository.findById(id);
+            if (maybe.isEmpty()) {
+                return ResponseEntity.status(404).body(
+                        Map.of("error", "Producto no encontrado")
+                );
+            }
+            try {
+                productRepository.deleteById(id);
+                return ResponseEntity.ok(Map.of(
+                        "message", "Producto eliminado correctamente",
+                        "id", id
+                ));
+            } catch (Exception e) {
+                return ResponseEntity.status(500).body(
+                        Map.of("error", "Error al eliminar el producto: " + e.getMessage())
+                );
+            }
+        }
 }
 
