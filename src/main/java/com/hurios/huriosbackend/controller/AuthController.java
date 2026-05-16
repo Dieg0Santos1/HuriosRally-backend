@@ -53,13 +53,40 @@ public class AuthController {
         }
         return ResponseEntity.ok(res);
     }
-     // POST /auth/send-verification-code  (envía código por email)
+
+    // POST /auth/send-verification-code  (envía código por email)
     // body: { "email": "..." }
     @PostMapping("/send-verification-code")
     public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String,String> body) {
         try {
             String email = body.get("email");
             String msg = authService.sendVerificationCode(email);
+            return ResponseEntity.ok(Map.of("message", msg));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    // POST /auth/verify-code
+    // body: { "email": "...", "code": "123456" }
+    @PostMapping("/verify-code")
+    public ResponseEntity<?> verifyCode(@RequestBody Map<String,String> body) {
+        String email = body.get("email");
+        String code = body.get("code");
+        String msg = authService.verifyCode(email, code);
+        if ("Email verificado".equals(msg)) {
+            return ResponseEntity.ok(Map.of("message", msg));
+        }
+        return ResponseEntity.badRequest().body(Map.of("error", msg));
+    }
+
+    // POST /auth/request-password-reset
+    // body: { "email": "..." }
+    @PostMapping("/request-password-reset")
+    public ResponseEntity<?> requestPasswordReset(@RequestBody Map<String,String> body) {
+        try {
+            String email = body.get("email");
+            String msg = authService.requestPasswordReset(email);
             return ResponseEntity.ok(Map.of("message", msg));
         } catch (Exception e) {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
@@ -79,5 +106,4 @@ public class AuthController {
         }
         return ResponseEntity.badRequest().body(Map.of("error", msg));
     }
-
 }
