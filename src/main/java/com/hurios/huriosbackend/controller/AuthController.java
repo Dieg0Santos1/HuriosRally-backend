@@ -65,4 +65,19 @@ public class AuthController {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
+
+    // POST /auth/request-password-reset
+    // body: { "email": "..." }
+    @PostMapping("/request-password-reset")
+    public ResponseEntity<?> requestPasswordReset(@RequestBody Map<String,String> body) {
+        try {
+            String email = body.get("email");
+            String msg = authService.requestPasswordReset(email);
+            return ResponseEntity.ok(Map.of("message", msg));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
+
+
 }
