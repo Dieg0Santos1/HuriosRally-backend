@@ -65,4 +65,19 @@ public class AuthController {
             return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
         }
     }
+
+    // POST /auth/reset-password
+    // body: { "email": "...", "token": "...", "newPassword": "..." }
+    @PostMapping("/reset-password")
+    public ResponseEntity<?> resetPassword(@RequestBody Map<String,String> body) {
+        String email = body.get("email");
+        String token = body.get("token");
+        String newPassword = body.get("newPassword");
+        String msg = authService.resetPassword(email, token, newPassword);
+        if ("Contraseña actualizada".equals(msg)) {
+            return ResponseEntity.ok(Map.of("message", msg));
+        }
+        return ResponseEntity.badRequest().body(Map.of("error", msg));
+    }
+
 }
