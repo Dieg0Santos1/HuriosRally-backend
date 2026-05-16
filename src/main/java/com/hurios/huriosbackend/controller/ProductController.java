@@ -42,5 +42,18 @@ public class ProductController {
                     Map.of("error", "Producto no encontrado")
             );
         }
+        // GET /products/search?q=query -> Sirve para buscar productos por nombre
+        @GetMapping("/search")
+        public ResponseEntity<?> search(@RequestParam(required = false) String q) {
+            if (q == null || q.trim().isEmpty()) {
+                return ResponseEntity.ok(productRepository.findAll());
+            }
+            // Buscar productos cuyo nombre contenga la query (case insensitive)
+            return ResponseEntity.ok(
+                    productRepository.findAll().stream()
+                            .filter(p -> p.getName().toLowerCase().contains(q.toLowerCase()))
+                            .toList()
+            );
+        }
 }
 
