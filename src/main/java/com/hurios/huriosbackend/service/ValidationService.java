@@ -13,7 +13,7 @@ public class ValidationService {
     /**
      * Valida que el email no sea nulo o vacío y tenga formato válido
      */
-    public void ValidateEmail(String email){
+    public void validateEmail(String email){
         Preconditions.checkArgument(
                 !Strings.isNullOrEmpty(email),
                 "El email no puede estar vacío"
