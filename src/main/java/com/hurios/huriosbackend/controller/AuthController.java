@@ -53,4 +53,16 @@ public class AuthController {
         }
         return ResponseEntity.ok(res);
     }
+     // POST /auth/send-verification-code  (envía código por email)
+    // body: { "email": "..." }
+    @PostMapping("/send-verification-code")
+    public ResponseEntity<?> sendVerificationCode(@RequestBody Map<String,String> body) {
+        try {
+            String email = body.get("email");
+            String msg = authService.sendVerificationCode(email);
+            return ResponseEntity.ok(Map.of("message", msg));
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(Map.of("error", e.getMessage()));
+        }
+    }
 }
