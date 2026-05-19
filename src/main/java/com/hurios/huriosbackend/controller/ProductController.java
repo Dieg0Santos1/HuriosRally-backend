@@ -42,5 +42,32 @@ public class ProductController {
                     Map.of("error", "Producto no encontrado")
             );
         }
+
+        @PutMapping("/{id}/add-stock")
+        public ResponseEntity<?> addStock(@PathVariable Long id, @RequestBody Map<String, Integer> body) {
+            Optional<Product> maybe = productRepository.findById(id);
+            if (maybe.isEmpty()) {
+                return ResponseEntity.status(404).body(
+                        Map.of("error", "Producto no encontrado")
+                );
+            }
+
+            Integer quantity = body.get("quantity");
+            if (quantity == null || quantity <= 0) {
+                return ResponseEntity.badRequest().body(
+                        Map.of("error", "La cantidad debe ser mayor a 0")
+                );
+            }
+
+            Product product = maybe.get();
+            int currentStock = product.getStock() != null ? product.getStock() : 0;
+            product.setStock(currentStock + quantity);
+            productRepository.save(product);
+
+            return ResponseEntity.ok(Map.of(
+                    "message", "Stock actualizado correctamente",
+                    "newStock", product.getStock()
+            ));
+        }
 }
 
