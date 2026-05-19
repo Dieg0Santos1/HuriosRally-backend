@@ -1,0 +1,52 @@
+package com.hurios.huriosbackend.controller;
+
+import com.hurios.huriosbackend.dto.PaymentDtos;
+import com.hurios.huriosbackend.service.PaymentService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.CrossOrigin;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+import java.util.Map;
+
+@RestController
+@RequestMapping("/payments")
+@CrossOrigin(origins = "*")
+public class PaymentController {
+
+    @Autowired
+    private PaymentService paymentService;
+
+    @PostMapping("/process")
+    public ResponseEntity<?> processPayment(
+            @RequestBody PaymentDtos.ProcessPaymentRequest request,
+            Authentication authentication
+    ) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Usuario no autenticado");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
+
+            String userEmail = authentication.getName();
+            PaymentDtos.ProcessPaymentResponse response = paymentService.processPayment(request, userEmail);
+
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", e.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(error);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Error al procesar el pago: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
+}
