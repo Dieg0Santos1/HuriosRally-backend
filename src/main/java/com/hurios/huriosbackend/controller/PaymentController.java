@@ -72,4 +72,22 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
+
+    @GetMapping("/all")
+    public ResponseEntity<?> getAllSales(Authentication authentication) {
+        try {
+            if (authentication == null || !authentication.isAuthenticated()) {
+                Map<String, String> error = new HashMap<>();
+                error.put("error", "Usuario no autenticado");
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
+            }
+
+            List<Sale> sales = paymentService.getAllSales();
+            return ResponseEntity.ok(sales);
+        } catch (Exception e) {
+            Map<String, String> error = new HashMap<>();
+            error.put("error", "Error al obtener las ventas: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
+        }
+    }
 }
