@@ -371,3 +371,190 @@ public class UserManagementService {
                 .filter(user -> !activeUserIds.contains(user.getId()))
                 .collect(Collectors.toList());
     }
+
+    // ==================== ESTADÍSTICAS ====================
+
+    /**
+     * Obtener estadísticas generales de usuarios
+     */
+    public UserStatistics getUserStatistics() {
+        List<User> allUsers = userRepository.findAll();
+        
+        UserStatistics stats = new UserStatistics();
+        stats.setTotalUsers(allUsers.size());
+        
+        // Usuarios verificados vs no verificados
+        long verifiedCount = allUsers.stream()
+                .filter(User::isVerified)
+                .count();
+        stats.setVerifiedUsers((int) verifiedCount);
+        stats.setUnverifiedUsers(allUsers.size() - (int) verifiedCount);
+        
+        // Usuarios por rol
+        stats.setUsersByRole(countUsersByRole());
+        
+        // Usuarios nuevos este mes
+        LocalDateTime startOfMonth = LocalDateTime.now().withDayOfMonth(1).withHour(0).withMinute(0);
+        long newThisMonth = allUsers.stream()
+                .filter(user -> user.getCreatedAt() != null)
+                .filter(user -> user.getCreatedAt().isAfter(startOfMonth))
+                .count();
+        stats.setNewUsersThisMonth((int) newThisMonth);
+        
+        // Usuarios activos (con compras)
+        Set<Long> activeUserIds = saleRepository.findAll().stream()
+                .filter(sale -> sale.getUser() != null)
+                .map(sale -> sale.getUser().getId())
+                .collect(Collectors.toSet());
+        stats.setActiveUsers(activeUserIds.size());
+        stats.setInactiveUsers(allUsers.size() - activeUserIds.size());
+        
+        return stats;
+    }
+
+    /**
+     * Obtener perfil completo de usuario con estadísticas
+     */
+    public UserProfile getUserProfile(Long userId) {
+        validationService.validateId(userId);
+        
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("Usuario no encontrado"));
+        
+        UserProfile profile = new UserProfile();
+        profile.setUser(user);
+        
+        // Estadísticas de compras
+        List<Double> purchases = saleRepository.findAll().stream()
+                .filter(sale -> sale.getUser() != null && sale.getUser().getId().equals(userId))
+                .filter(sale -> sale.getTotal() != null)
+                .map(sale -> sale.getTotal())
+                .collect(Collectors.toList());
+        
+        profile.setTotalPurchases(purchases.size());
+        
+        double totalSpent = purchases.stream().mapToDouble(Double::doubleValue).sum();
+        profile.setTotalSpent(totalSpent);
+        
+        double averageSpent = purchases.isEmpty() ? 0 : totalSpent / purchases.size();
+        profile.setAverageOrderValue(averageSpent);
+        
+        // Última compra
+        saleRepository.findAll().stream()
+                .filter(sale -> sale.getUser() != null && sale.getUser().getId().equals(userId))
+                .filter(sale -> sale.getCreatedAt() != null)
+                .max((s1, s2) -> s1.getCreatedAt().compareTo(s2.getCreatedAt()))
+                .ifPresent(sale -> profile.setLastPurchaseDate(sale.getCreatedAt()));
+        
+        return profile;
+    }
+
+    // ==================== UTILIDADES ====================
+
+    /**
+     * Verificar si un email ya está registrado
+     */
+    public boolean emailExists(String email) {
+        try {
+            validationService.validateEmail(email);
+            String normalizedEmail = validationService.normalizeEmail(email);
+            return userRepository.findByEmail(normalizedEmail).isPresent();
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
+    }
+
+    /**
+     * Contar usuarios totales
+     */
+    public long countTotalUsers() {
+        return userRepository.count();
+    }
+
+    /**
+     * Generar contraseña temporal aleatoria
+     */
+    private String generateTemporaryPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%";
+        Random random = new Random();
+        StringBuilder password = new StringBuilder();
+        
+        for (int i = 0; i < 12; i++) {
+            password.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        
+        return password.toString();
+    }
+
+    /**
+     * Exportar usuarios a formato CSV (String)
+     */
+    public String exportUsersToCSV() {
+        List<User> users = userRepository.findAll();
+        StringBuilder csv = new StringBuilder();
+        
+        // Encabezados
+        csv.append("ID,Email,Nombre Completo,Rol,Verificado,Fecha de Registro\n");
+        
+        // Datos
+        users.forEach(user -> {
+            csv.append(user.getId()).append(",")
+               .append(user.getEmail() != null ? user.getEmail() : "").append(",")
+               .append(user.getFullName() != null ? user.getFullName() : "").append(",")
+               .append(user.getRole() != null ? user.getRole() : "").append(",")
+               .append(user.isVerified() ? "Sí" : "No").append(",")
+               .append(user.getCreatedAt() != null ? user.getCreatedAt().toString() : "")
+               .append("\n");
+        });
+        
+        return csv.toString();
+    }
+
+    // ==================== CLASES INTERNAS ====================
+
+    public static class UserStatistics {
+        private int totalUsers;
+        private int verifiedUsers;
+        private int unverifiedUsers;
+        private int activeUsers;
+        private int inactiveUsers;
+        private int newUsersThisMonth;
+        private Map<String, Long> usersByRole;
+
+        // Getters y setters
+        public int getTotalUsers() { return totalUsers; }
+        public void setTotalUsers(int totalUsers) { this.totalUsers = totalUsers; }
+        public int getVerifiedUsers() { return verifiedUsers; }
+        public void setVerifiedUsers(int verifiedUsers) { this.verifiedUsers = verifiedUsers; }
+        public int getUnverifiedUsers() { return unverifiedUsers; }
+        public void setUnverifiedUsers(int unverifiedUsers) { this.unverifiedUsers = unverifiedUsers; }
+        public int getActiveUsers() { return activeUsers; }
+        public void setActiveUsers(int activeUsers) { this.activeUsers = activeUsers; }
+        public int getInactiveUsers() { return inactiveUsers; }
+        public void setInactiveUsers(int inactiveUsers) { this.inactiveUsers = inactiveUsers; }
+        public int getNewUsersThisMonth() { return newUsersThisMonth; }
+        public void setNewUsersThisMonth(int newUsersThisMonth) { this.newUsersThisMonth = newUsersThisMonth; }
+        public Map<String, Long> getUsersByRole() { return usersByRole; }
+        public void setUsersByRole(Map<String, Long> usersByRole) { this.usersByRole = usersByRole; }
+    }
+
+    public static class UserProfile {
+        private User user;
+        private int totalPurchases;
+        private double totalSpent;
+        private double averageOrderValue;
+        private LocalDateTime lastPurchaseDate;
+
+        // Getters y setters
+        public User getUser() { return user; }
+        public void setUser(User user) { this.user = user; }
+        public int getTotalPurchases() { return totalPurchases; }
+        public void setTotalPurchases(int totalPurchases) { this.totalPurchases = totalPurchases; }
+        public double getTotalSpent() { return totalSpent; }
+        public void setTotalSpent(double totalSpent) { this.totalSpent = totalSpent; }
+        public double getAverageOrderValue() { return averageOrderValue; }
+        public void setAverageOrderValue(double averageOrderValue) { this.averageOrderValue = averageOrderValue; }
+        public LocalDateTime getLastPurchaseDate() { return lastPurchaseDate; }
+        public void setLastPurchaseDate(LocalDateTime lastPurchaseDate) { this.lastPurchaseDate = lastPurchaseDate; }
+    }
+}
