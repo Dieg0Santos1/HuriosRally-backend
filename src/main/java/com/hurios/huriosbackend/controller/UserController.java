@@ -77,4 +77,85 @@ public class UserController {
 
         throw new IllegalArgumentException("Token inválido");
     }
+
+
+     @PostMapping("/profile-image")
+    public ResponseEntity<?> uploadProfileImage(
+            @RequestHeader("Authorization") String authHeader,
+            @RequestParam("file") MultipartFile file) {
+        try {
+            // Validar token
+            String token = extractToken(authHeader);
+            String email = jwtUtil.validateAndGetSubject(token);
+            
+            Optional<User> userOpt = userRepository.findByEmail(email);
+            if (userOpt.isEmpty()) {
+                return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
+            }
+
+            // Validar archivo
+            if (file.isEmpty()) {
+                return ResponseEntity.badRequest().body(
+                    Map.of("error", "El archivo está vacío")
+                );
+            }
+
+            // Validar tipo de archivo
+            String contentType = file.getContentType();
+            if (contentType == null || !contentType.startsWith("image/")) {
+                return ResponseEntity.badRequest().body(
+                    Map.of("error", "El archivo debe ser una imagen")
+                );
+            }
+
+            // Validar tamaño (máximo 5MB)
+            if (file.getSize() > 5 * 1024 * 1024) {
+                return ResponseEntity.badRequest().body(
+                    Map.of("error", "La imagen no debe superar los 5MB")
+                );
+            }
+
+            // Crear directorio si no existe
+            String uploadDir = "uploads/profiles/";
+            File uploadPath = new File(uploadDir);
+            if (!uploadPath.exists()) {
+                uploadPath.mkdirs();
+            }
+
+            // Generar nombre único para el archivo
+            String originalFilename = file.getOriginalFilename();
+            String extension = "";
+            if (originalFilename != null && originalFilename.contains(".")) {
+                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
+            }
+            String uniqueFilename = UUID.randomUUID().toString() + extension;
+
+            // Guardar el archivo
+            Path destinationPath = Paths.get(uploadDir + uniqueFilename);
+            Files.copy(file.getInputStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
+
+            // Actualizar usuario con la URL de la imagen
+            String imageUrl = "/uploads/profiles/" + uniqueFilename;
+            User user = userOpt.get();
+            user.setProfileImage(imageUrl);
+            userRepository.save(user);
+
+            return ResponseEntity.ok(Map.of(
+                "imageUrl", imageUrl,
+                "message", "Imagen de perfil actualizada correctamente"
+            ));
+
+        } catch (IllegalArgumentException e) {
+            return ResponseEntity.status(401).body(Map.of("error", "Token inválido"));
+        } catch (IOException e) {
+            return ResponseEntity.status(500).body(
+                Map.of("error", "Error al guardar la imagen: " + e.getMessage())
+            );
+        } catch (Exception e) {
+            return ResponseEntity.status(500).body(
+                Map.of("error", "Error interno del servidor")
+            );
+        }
+    }
+
 }
