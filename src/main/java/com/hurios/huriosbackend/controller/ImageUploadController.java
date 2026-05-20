@@ -14,6 +14,13 @@ public class ImageUploadController {
 @PostMapping("/upload")
 public ResponseEntity<?> uploadImage(@RequestParam("file") MultipartFile file) {
 
+    if (file.isEmpty()) {
+
+        return ResponseEntity.badRequest().body(
+                Map.of("error", "El archivo está vacío")
+        );
+    }
+
     return ResponseEntity.ok().build();
 }
 
