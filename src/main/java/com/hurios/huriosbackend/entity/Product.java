@@ -1,20 +1,12 @@
 package com.hurios.huriosbackend.entity;
 
-import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
-import jakarta.persistence.Table;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
-@Entity
-@Table(name = "products")
 public class Product {
     @Id
     @GeneratedValue(strategy= GenerationType.IDENTITY)
@@ -31,11 +23,6 @@ public class Product {
     private String category;
     @Column(name = "created_at")
     private LocalDateTime createdAt = LocalDateTime.now();
-
-    @JsonIgnore
-    @OneToMany(mappedBy = "product")
-    private List<SaleItem> saleItems = new ArrayList<>();
-
     public Long getId() {
         return id;
     }
@@ -83,13 +70,5 @@ public class Product {
     }
     public void setCreatedAt(LocalDateTime createdAt) {
         this.createdAt = createdAt;
-    }
-
-    public List<SaleItem> getSaleItems() {
-        return saleItems;
-    }
-
-    public void setSaleItems(List<SaleItem> saleItems) {
-        this.saleItems = saleItems;
     }
 }
