@@ -70,6 +70,28 @@ public class ExportController {
             return ResponseEntity.internalServerError().build();
         }
     }
+/**
+     * GET /export/sales - Exportar ventas a Excel
+     */
+    @GetMapping("/sales")
+    public ResponseEntity<byte[]> exportSales() {
+        try {
+            byte[] excelData = excelExportService.exportSales();
+            
+            String timestamp = LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss"));
+            String filename = "Ventas_" + timestamp + ".xlsx";
 
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", filename);
+            headers.setCacheControl("must-revalidate, post-check=0, pre-check=0");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(excelData);
+        } catch (IOException e) {
+            return ResponseEntity.internalServerError().build();
+        }
+    }
     
 }
