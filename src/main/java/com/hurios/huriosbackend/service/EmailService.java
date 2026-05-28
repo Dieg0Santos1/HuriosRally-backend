@@ -27,7 +27,7 @@ import org.springframework.stereotype.Service;
 public class EmailService {
 
     private static final Logger logger = LoggerFactory.getLogger(EmailService.class);
-    private static final String SENDGRID_ENDPOINT = "https://api.sendgrid.com/v3/mail/send";
+    private static final String RESEND_ENDPOINT = "https://api.resend.com/emails";
 
     private final JavaMailSender mailSender;
     private final ValidationService validationService;
@@ -43,8 +43,8 @@ public class EmailService {
     @Value("${app.email.mock:false}")
     private boolean mockEmail;
 
-    @Value("${sendgrid.api-key:}")
-    private String sendGridApiKey;
+    @Value("${resend.api-key:}")
+    private String resendApiKey;
 
     public EmailService(JavaMailSender mailSender, ValidationService validationService, ObjectMapper objectMapper) {
         this.mailSender = mailSender;
@@ -69,30 +69,30 @@ public class EmailService {
             return;
         }
 
-        if (hasSendGridApiKey()) {
-            sendViaSendGrid(to, subject, html, includeLogo);
+        if (hasResendApiKey()) {
+            sendViaResend(to, subject, html, includeLogo);
             return;
         }
 
         sendViaSmtp(to, subject, html, includeLogo);
     }
 
-    private void sendViaSendGrid(String to, String subject, String html, boolean includeLogo) throws Exception {
+    private void sendViaResend(String to, String subject, String html, boolean includeLogo) throws Exception {
         try {
-            logger.info("Attempting to send email through SendGrid to: {}", to);
+            logger.info("Attempting to send email through Resend to: {}", to);
 
             String renderedHtml = includeLogo ? replaceCidLogo(html) : html;
             Map<String, Object> payload = Map.of(
-                    "personalizations", List.of(Map.of("to", List.of(Map.of("email", to)))),
-                    "from", Map.of("email", from, "name", fromName),
+                    "from", buildFromAddress(),
+                    "to", List.of(to),
                     "subject", subject,
-                    "content", List.of(Map.of("type", "text/html", "value", renderedHtml))
+                    "html", renderedHtml
             );
 
             HttpRequest request = HttpRequest.newBuilder()
-                    .uri(URI.create(SENDGRID_ENDPOINT))
+                    .uri(URI.create(RESEND_ENDPOINT))
                     .timeout(Duration.ofSeconds(15))
-                    .header("Authorization", "Bearer " + sendGridApiKey.trim())
+                    .header("Authorization", "Bearer " + resendApiKey.trim())
                     .header("Content-Type", "application/json")
                     .POST(HttpRequest.BodyPublishers.ofString(
                             objectMapper.writeValueAsString(payload), StandardCharsets.UTF_8))
@@ -100,14 +100,14 @@ public class EmailService {
 
             HttpResponse<String> response = httpClient.send(request, HttpResponse.BodyHandlers.ofString());
             if (response.statusCode() < 200 || response.statusCode() >= 300) {
-                logger.error("SendGrid rejected email with status {}: {}", response.statusCode(), response.body());
-                throw new Exception("SendGrid rechazó el correo. Verifica API key y sender verificado.");
+                logger.error("Resend rejected email with status {}: {}", response.statusCode(), response.body());
+                throw new Exception("Resend rechazó el correo: " + response.body());
             }
 
-            logger.info("Email sent successfully through SendGrid to: {}", to);
+            logger.info("Email sent successfully through Resend to: {}", to);
         } catch (Exception e) {
-            logger.error("Failed to send email through SendGrid to {}: {}", to, e.getMessage());
-            throw new Exception("Error al enviar email con SendGrid: " + e.getMessage(), e);
+            logger.error("Failed to send email through Resend to {}: {}", to, e.getMessage());
+            throw new Exception("Error al enviar email con Resend: " + e.getMessage(), e);
         }
     }
 
@@ -154,8 +154,15 @@ public class EmailService {
                 .replace("<img src=\"cid:logo\" alt=\"Hurios Rally\" />", "");
     }
 
-    private boolean hasSendGridApiKey() {
-        return sendGridApiKey != null && !sendGridApiKey.trim().isEmpty();
+    private String buildFromAddress() {
+        if (fromName == null || fromName.trim().isEmpty()) {
+            return from;
+        }
+        return fromName.trim() + " <" + from.trim() + ">";
+    }
+
+    private boolean hasResendApiKey() {
+        return resendApiKey != null && !resendApiKey.trim().isEmpty();
     }
 
     public void sendPurchaseConfirmation(String to, Long orderId, Double total) throws Exception {
