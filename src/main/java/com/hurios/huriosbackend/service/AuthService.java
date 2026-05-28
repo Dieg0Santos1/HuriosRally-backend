@@ -142,6 +142,28 @@ public class AuthService {
         return "Email verificado";
     }
 
+    @Transactional
+    public Map<String, Object> verifyCodeAndLogin(String email, String code) {
+        String result = verifyCode(email, code);
+        if (!"Email verificado".equals(result)) {
+            return Map.of("ok", false, "message", result);
+        }
+
+        Optional<User> userOpt = userRepo.findByEmail(email);
+        if (userOpt.isEmpty()) {
+            return Map.of("ok", false, "message", "Usuario no encontrado");
+        }
+
+        User user = userOpt.get();
+        String token = jwtUtil.generateToken(user.getEmail());
+        return Map.of(
+                "ok", true,
+                "message", "Email verificado",
+                "token", token,
+                "role", user.getRole()
+        );
+    }
+
     // Solicitar reset: crear token (UUID), guardar y enviar link al frontend
     public String requestPasswordReset(String email) throws Exception {
         Optional<User> op = userRepo.findByEmail(email);

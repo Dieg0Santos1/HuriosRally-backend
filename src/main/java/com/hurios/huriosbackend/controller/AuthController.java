@@ -72,11 +72,12 @@ public class AuthController {
     public ResponseEntity<?> verifyCode(@RequestBody Map<String,String> body) {
         String email = body.get("email");
         String code = body.get("code");
-        String msg = authService.verifyCode(email, code);
-        if ("Email verificado".equals(msg)) {
-            return ResponseEntity.ok(Map.of("message", msg));
+        Map<String, Object> res = authService.verifyCodeAndLogin(email, code);
+        boolean ok = Boolean.TRUE.equals(res.get("ok"));
+        if (ok) {
+            return ResponseEntity.ok(res);
         }
-        return ResponseEntity.badRequest().body(Map.of("error", msg));
+        return ResponseEntity.badRequest().body(Map.of("error", res.get("message")));
     }
 
     // POST /auth/request-password-reset
