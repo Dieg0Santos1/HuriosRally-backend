@@ -12,7 +12,6 @@ import java.io.IOException;
  */
 @RestController
 @RequestMapping("/backup")
-@CrossOrigin(origins = "*")
 public class BackupController {
 
     private final BackupService backupService;
