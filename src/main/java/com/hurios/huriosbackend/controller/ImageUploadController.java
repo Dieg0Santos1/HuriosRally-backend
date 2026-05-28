@@ -16,7 +16,6 @@ import java.util.UUID;
 
 @RestController
 @RequestMapping("/api/images")
-@CrossOrigin(origins = "http://localhost:5173")
 public class ImageUploadController {
 
     // Directorio donde se guardarán las imágenes
