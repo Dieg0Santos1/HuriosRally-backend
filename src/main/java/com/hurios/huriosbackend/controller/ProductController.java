@@ -11,11 +11,9 @@ import java.util.Optional;
 
 @RestController
 @RequestMapping("/products")
-@CrossOrigin(origins = "http://localhost:5173")
 /**
  * ProductController - controlador sencillo y seguro para productos.
  * - Devolvemos ResponseEntity<Object> para poder enviar Product o Map de error.
- * - @CrossOrigin permite peticiones desde el frontend en dev (ajusta el origen).
  */
 public class ProductController {
     private final ProductRepository productRepository;

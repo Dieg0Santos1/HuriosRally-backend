@@ -15,7 +15,6 @@ import java.time.format.DateTimeFormatter;
  */
 @RestController
 @RequestMapping("/export")
-@CrossOrigin(origins = "*")
 public class ExportController {
 
     private final ExcelExportService excelExportService;
