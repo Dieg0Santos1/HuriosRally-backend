@@ -32,6 +32,8 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+
+                        .requestMatchers("/", "/health-public").permitAll()
                         
                         // Tus rutas existentes
                         .requestMatchers("/auth/**").permitAll()
