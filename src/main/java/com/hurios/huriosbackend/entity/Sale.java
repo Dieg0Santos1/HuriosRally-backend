@@ -27,7 +27,7 @@ public class Sale {
 
     @JsonIgnoreProperties({"passwordHash", "hibernateLazyInitializer", "handler"})
     @ManyToOne(fetch = FetchType.EAGER)
-    @JoinColumn(name = "user_id", nullable = false)
+    @JoinColumn(name = "id", nullable = false)
     private User user;
 
     @Column(name = "full_name", nullable = false)
