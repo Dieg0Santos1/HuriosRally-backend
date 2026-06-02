@@ -2,10 +2,12 @@ package com.hurios.huriosbackend.controller;
 
 import com.hurios.huriosbackend.entity.Product;
 import com.hurios.huriosbackend.repository.ProductRepository;
+import com.hurios.huriosbackend.service.ProductService;
 import com.hurios.huriosbackend.service.ValidationService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 
@@ -18,12 +20,24 @@ import java.util.Optional;
 public class ProductController {
     private final ProductRepository productRepository;
     private final ValidationService validationService;
-
-    public ProductController(ProductRepository productRepository, ValidationService validationService) {
+    private final ProductService productService;
+    public ProductController(ProductRepository productRepository, ValidationService validationService,ProductService productService) {
         this.productRepository = productRepository;
         this.validationService = validationService;
+        this.productService=productService;
+    }
+    @GetMapping("/low-stock")
+    public ResponseEntity<List<Product>> getLowStockProducts(
+            @RequestParam(defaultValue = "5") int threshold) {
+        List<Product> products = productService.getLowStockProducts(threshold);
+        return ResponseEntity.ok(products);
     }
 
+    @GetMapping("/out-of-stock")
+    public ResponseEntity<List<Product>> getOutOfStockProducts() {
+        List<Product> products = productService.getOutOfStockProducts();
+        return ResponseEntity.ok(products);
+    }
     // GET /products -> Lista de todos los productos
     @GetMapping
     public ResponseEntity<?> all() {
@@ -42,7 +56,6 @@ public class ProductController {
                 Map.of("error", "Producto no encontrado")
         );
     }
-
     // GET /products/search?q=query -> Sirve para buscar productos por nombre
     @GetMapping("/search")
     public ResponseEntity<?> search(@RequestParam(required = false) String q) {
