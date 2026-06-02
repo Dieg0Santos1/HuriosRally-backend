@@ -21,7 +21,8 @@ import java.util.Collections;
  * añadir si lo necesitas.
  */
 public class JwtAuthFilter extends OncePerRequestFilter {
-
+    private static final org.slf4j.Logger logger =
+            org.slf4j.LoggerFactory.getLogger(JwtAuthFilter.class);
     private final JwtUtil jwtUtil;
 
     public JwtAuthFilter(JwtUtil jwtUtil) {
@@ -46,9 +47,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 // Colocar en el contexto
                 SecurityContextHolder.getContext().setAuthentication(auth);
             } catch (Exception ex) {
-                // Si el token es inválido/expirado, no autenticamos; dejamos que
-                // la cadena continúe y Spring responda 401 si la ruta requiere auth.
-                // También podríamos detener la petición y forzar 401 aquí.
+                // Loguea el motivo real del fallo
+                logger.warn("JWT inválido o expirado: {}", ex.getMessage());
             }
         }
 

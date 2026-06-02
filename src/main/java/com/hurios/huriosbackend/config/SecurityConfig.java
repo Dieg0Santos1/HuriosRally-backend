@@ -41,7 +41,7 @@ public class SecurityConfig {
                         .requestMatchers("/export/**").permitAll()
                         .requestMatchers("/uploads/**").permitAll()
                         .requestMatchers("/api/images/**").permitAll()
-                        
+                        .requestMatchers("/payment/**").authenticated()
                         .anyRequest().authenticated())
                 .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
 
