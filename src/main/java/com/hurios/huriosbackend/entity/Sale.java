@@ -25,8 +25,8 @@ public class Sale {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @JsonIgnoreProperties({"passwordHash"})
-    @ManyToOne(fetch = FetchType.LAZY)
+    @JsonIgnoreProperties({"passwordHash", "hibernateLazyInitializer", "handler"})
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
