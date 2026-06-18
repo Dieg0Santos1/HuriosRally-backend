@@ -159,6 +159,26 @@ public class ProductService {
         repo.deleteById(id);
     }
     /**
+     * Obtener productos con bajo stock (menor o igual a un umbral)
+     */
+    public List<Product> getLowStockProducts(int threshold) {
+        if (threshold < 0) {
+            throw new IllegalArgumentException("El umbral debe ser mayor o igual a 0");
+        }
+        return repo.findAll().stream()
+                .filter(product -> {
+                    int stock = product.getStock() != null ? product.getStock() : 0;
+                    return stock <= threshold;
+                })
+                .collect(Collectors.toList());
+    }
+    /**
+     * Obtener productos sin stock
+     */
+    public List<Product> getOutOfStockProducts() {
+        return getLowStockProducts(0);
+    }
+    /**
      * Contar productos totales
      */
     public long countProducts() {
