@@ -1,6 +1,7 @@
 package com.hurios.huriosbackend.entity;
 
 import com.fasterxml.jackson.annotation.JsonBackReference;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.FetchType;
@@ -23,6 +24,7 @@ public class SaleItem {
     @JoinColumn(name = "sale_id", nullable = false)
     private Sale sale;
 
+    @JsonIgnoreProperties({"saleItems", "hibernateLazyInitializer", "handler"})
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "product_id", nullable = false)
     private Product product;
