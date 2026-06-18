@@ -3,46 +3,38 @@ package com.hurios.huriosbackend.controller;
 import com.hurios.huriosbackend.config.JwtUtil;
 import com.hurios.huriosbackend.entity.User;
 import com.hurios.huriosbackend.repository.UserRepository;
+import com.hurios.huriosbackend.service.FileStorageService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.io.File;
 import java.io.IOException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.nio.file.StandardCopyOption;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Optional;
-import java.util.UUID;
 
-/**
- * UserController - endpoints para gestión de perfil de usuario
- */
 @RestController
 @RequestMapping("/user")
 public class UserController {
 
     private final UserRepository userRepository;
     private final JwtUtil jwtUtil;
+    private final FileStorageService fileStorageService;
 
-    public UserController(UserRepository userRepository, JwtUtil jwtUtil) {
+    public UserController(UserRepository userRepository,
+                          JwtUtil jwtUtil,
+                          FileStorageService fileStorageService) {
         this.userRepository = userRepository;
         this.jwtUtil = jwtUtil;
+        this.fileStorageService = fileStorageService;
     }
 
-    /**
-     * GET /user/profile
-     * Obtiene el perfil del usuario autenticado
-     */
     @GetMapping("/profile")
     public ResponseEntity<?> getProfile(@RequestHeader("Authorization") String authHeader) {
         try {
             String token = extractToken(authHeader);
             String email = jwtUtil.validateAndGetSubject(token);
-            
+
             Optional<User> userOpt = userRepository.findByEmail(email);
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
@@ -60,14 +52,10 @@ public class UserController {
 
             return ResponseEntity.ok(profile);
         } catch (Exception e) {
-            return ResponseEntity.status(401).body(Map.of("error", "Token inválido"));
+            return ResponseEntity.status(401).body(Map.of("error", "Token invalido"));
         }
     }
 
-    /**
-     * PUT /user/profile
-     * Actualiza el perfil del usuario autenticado
-     */
     @PutMapping("/profile")
     public ResponseEntity<?> updateProfile(
             @RequestHeader("Authorization") String authHeader,
@@ -75,15 +63,14 @@ public class UserController {
         try {
             String token = extractToken(authHeader);
             String email = jwtUtil.validateAndGetSubject(token);
-            
+
             Optional<User> userOpt = userRepository.findByEmail(email);
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
             }
 
             User user = userOpt.get();
-            
-            // Actualizar campos si están presentes
+
             if (updates.containsKey("fullName")) {
                 user.setFullName(updates.get("fullName"));
             }
@@ -101,100 +88,70 @@ public class UserController {
 
             return ResponseEntity.ok(Map.of("message", "Perfil actualizado correctamente"));
         } catch (Exception e) {
-            return ResponseEntity.status(401).body(Map.of("error", "Token inválido"));
+            return ResponseEntity.status(401).body(Map.of("error", "Token invalido"));
         }
     }
 
-    /**
-     * POST /user/profile-image
-     * Sube la imagen de perfil del usuario autenticado
-     */
     @PostMapping("/profile-image")
     public ResponseEntity<?> uploadProfileImage(
             @RequestHeader("Authorization") String authHeader,
             @RequestParam("file") MultipartFile file) {
         try {
-            // Validar token
             String token = extractToken(authHeader);
             String email = jwtUtil.validateAndGetSubject(token);
-            
+
             Optional<User> userOpt = userRepository.findByEmail(email);
             if (userOpt.isEmpty()) {
                 return ResponseEntity.status(404).body(Map.of("error", "Usuario no encontrado"));
             }
 
-            // Validar archivo
             if (file.isEmpty()) {
                 return ResponseEntity.badRequest().body(
-                    Map.of("error", "El archivo está vacío")
+                        Map.of("error", "El archivo esta vacio")
                 );
             }
 
-            // Validar tipo de archivo
             String contentType = file.getContentType();
             if (contentType == null || !contentType.startsWith("image/")) {
                 return ResponseEntity.badRequest().body(
-                    Map.of("error", "El archivo debe ser una imagen")
+                        Map.of("error", "El archivo debe ser una imagen")
                 );
             }
 
-            // Validar tamaño (máximo 5MB)
             if (file.getSize() > 5 * 1024 * 1024) {
                 return ResponseEntity.badRequest().body(
-                    Map.of("error", "La imagen no debe superar los 5MB")
+                        Map.of("error", "La imagen no debe superar los 5MB")
                 );
             }
 
-            // Crear directorio si no existe
-            String uploadDir = "uploads/profiles/";
-            File uploadPath = new File(uploadDir);
-            if (!uploadPath.exists()) {
-                uploadPath.mkdirs();
-            }
+            FileStorageService.StoredFile storedFile = fileStorageService.uploadProfileImage(file);
 
-            // Generar nombre único para el archivo
-            String originalFilename = file.getOriginalFilename();
-            String extension = "";
-            if (originalFilename != null && originalFilename.contains(".")) {
-                extension = originalFilename.substring(originalFilename.lastIndexOf("."));
-            }
-            String uniqueFilename = UUID.randomUUID().toString() + extension;
-
-            // Guardar el archivo
-            Path destinationPath = Paths.get(uploadDir + uniqueFilename);
-            Files.copy(file.getInputStream(), destinationPath, StandardCopyOption.REPLACE_EXISTING);
-
-            // Actualizar usuario con la URL de la imagen
-            String imageUrl = "/uploads/profiles/" + uniqueFilename;
             User user = userOpt.get();
-            user.setProfileImage(imageUrl);
+            user.setProfileImage(storedFile.publicUrl());
             userRepository.save(user);
 
             return ResponseEntity.ok(Map.of(
-                "imageUrl", imageUrl,
-                "message", "Imagen de perfil actualizada correctamente"
+                    "imageUrl", storedFile.publicUrl(),
+                    "message", "Imagen de perfil actualizada correctamente"
             ));
 
         } catch (IllegalArgumentException e) {
-            return ResponseEntity.status(401).body(Map.of("error", "Token inválido"));
-        } catch (IOException e) {
+            return ResponseEntity.status(401).body(Map.of("error", "Token invalido"));
+        } catch (IOException | InterruptedException e) {
             return ResponseEntity.status(500).body(
-                Map.of("error", "Error al guardar la imagen: " + e.getMessage())
+                    Map.of("error", "Error al guardar la imagen: " + e.getMessage())
             );
         } catch (Exception e) {
             return ResponseEntity.status(500).body(
-                Map.of("error", "Error interno del servidor")
+                    Map.of("error", "Error interno del servidor")
             );
         }
     }
 
-    /**
-     * Extrae el token JWT del header Authorization
-     */
     private String extractToken(String authHeader) {
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7);
         }
-        throw new IllegalArgumentException("Token inválido");
+        throw new IllegalArgumentException("Token invalido");
     }
 }
