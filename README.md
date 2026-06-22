@@ -31,8 +31,55 @@ Las rutas principales expuestas por el backend y una breve descripción de cada 
 - **/auth**: Endpoints de autenticación y gestión de usuarios (registro, login, envío/verificación de códigos, reinicio de contraseña). Controlador: `AuthController`.
 - **/payments**: Endpoints para procesar pagos y consultar ventas. Manejo de ventas y registro de `Sale` en base de datos (no integra directamente un gateway de pagos en el backend; `PaymentService` registra la transacción). Controlador: `PaymentController`.
 - **/api/images**: Endpoint para subir imágenes (`POST /api/images/upload`). Usa `FileStorageService` para subir a Supabase Storage o almacenamiento local.
-- **/products**: Endpoints para gestión de productos (crear, listar, actualizar, eliminar) — Controlador: `ProductController`.
-- **/users**: Endpoints para gestión de usuarios — Controlador: `UserController`.
+- **/products**: Endpoints para gestión de productos (crear, listar, actualizar, eliminar) - Controlador: `ProductController`.
+- **/user**: Endpoints para gestión del perfil del usuario autenticado - Controlador: `UserController`.
 - **/export**: Endpoints para exportar datos en Excel (`/export/clients`, `/export/products`, `/export/sales`). Controlador: `ExportController`.
 - **/backup**: Endpoint para crear backups de configuración (`POST /backup/config`). Controlador: `BackupController`.
-- **/public-status**: Endpoint público para comprobar salud/estado (Controlador: `PublicStatusController`).
+- **/health-public** y **/**: Endpoints públicos para comprobar salud/estado (Controlador: `PublicStatusController`).
+
+## Lista de APIs creadas (Swagger)
+
+Listado de endpoints visibles en Swagger UI, agrupados por controlador:
+
+### user-controller
+- `GET /user/profile`: Obtiene el perfil del usuario autenticado desde su token JWT.
+- `PUT /user/profile`: Actualiza datos del perfil (nombre, teléfono, dirección o imagen).
+- `POST /user/profile-image`: Sube una nueva imagen de perfil y la asocia al usuario.
+
+### product-controller
+- `GET /products/{id}`: Devuelve el detalle de un producto por su ID.
+- `PUT /products/{id}`: Actualiza información de un producto existente.
+- `DELETE /products/{id}`: Elimina un producto por su ID.
+- `PUT /products/{id}/add-stock`: Incrementa el stock disponible de un producto.
+- `GET /products`: Lista todos los productos registrados.
+- `POST /products`: Crea un nuevo producto en el inventario.
+- `GET /products/search`: Busca productos por nombre usando el parámetro `q`.
+
+### payment-controller
+- `POST /payments/process`: Procesa una compra y registra la venta para el usuario autenticado.
+- `GET /payments/{id}`: Consulta una venta específica por su ID.
+- `GET /payments/my-orders`: Lista las órdenes/ventas del usuario autenticado.
+- `GET /payments/all`: Lista todas las ventas registradas (uso administrativo).
+
+### backup-controller
+- `POST /backup/config`: Genera un respaldo de archivos de configuración del backend.
+
+### auth-controller
+- `POST /auth/verify-code`: Valida el código de verificación y devuelve sesión/JWT si es correcto.
+- `POST /auth/send-verification-code`: Envía un código de verificación al correo del usuario.
+- `POST /auth/reset-password`: Restablece la contraseña usando token de recuperación.
+- `POST /auth/request-password-reset`: Solicita el inicio del flujo de recuperación de contraseña.
+- `POST /auth/register`: Registra un nuevo usuario en la plataforma.
+- `POST /auth/login`: Autentica al usuario y devuelve respuesta de acceso.
+
+### image-upload-controller
+- `POST /api/images/upload`: Sube una imagen de producto y devuelve su URL pública.
+
+### public-status-controller
+- `GET /health-public`: Endpoint público para verificar que el backend está en línea.
+- `GET /`: Endpoint raíz público que devuelve estado básico del servicio.
+
+### export-controller
+- `GET /export/sales`: Exporta las ventas a un archivo Excel descargable.
+- `GET /export/products`: Exporta los productos a un archivo Excel descargable.
+- `GET /export/clients`: Exporta los clientes a un archivo Excel descargable.
