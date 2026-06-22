@@ -25,3 +25,14 @@ A continuación se listan las APIs y servicios utilizados por el proyecto, agrup
 ### Dependencias/servicios del entorno
 - **Maven**: Gestión de dependencias y construcción del proyecto (`pom.xml`).
 - **SMTP externo**: Cualquier proveedor SMTP configurado para envíos si no se usa Resend.
+
+### Endpoints REST principales (API del backend)
+Las rutas principales expuestas por el backend y una breve descripción de cada una:
+- **/auth**: Endpoints de autenticación y gestión de usuarios (registro, login, envío/verificación de códigos, reinicio de contraseña). Controlador: `AuthController`.
+- **/payments**: Endpoints para procesar pagos y consultar ventas. Manejo de ventas y registro de `Sale` en base de datos (no integra directamente un gateway de pagos en el backend; `PaymentService` registra la transacción). Controlador: `PaymentController`.
+- **/api/images**: Endpoint para subir imágenes (`POST /api/images/upload`). Usa `FileStorageService` para subir a Supabase Storage o almacenamiento local.
+- **/products**: Endpoints para gestión de productos (crear, listar, actualizar, eliminar) — Controlador: `ProductController`.
+- **/users**: Endpoints para gestión de usuarios — Controlador: `UserController`.
+- **/export**: Endpoints para exportar datos en Excel (`/export/clients`, `/export/products`, `/export/sales`). Controlador: `ExportController`.
+- **/backup**: Endpoint para crear backups de configuración (`POST /backup/config`). Controlador: `BackupController`.
+- **/public-status**: Endpoint público para comprobar salud/estado (Controlador: `PublicStatusController`).
