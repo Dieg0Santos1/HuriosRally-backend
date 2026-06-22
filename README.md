@@ -22,4 +22,6 @@ A continuación se listan las APIs y servicios utilizados por el proyecto, agrup
 - **OpenAPI / Swagger (springdoc-openapi)**: Generación de especificación OpenAPI y UI Swagger para la API REST (configurada en `OpenApiConfig`).
 - **jjwt (JSON Web Tokens)**: Librería `io.jsonwebtoken` para generación y validación de JWT usados en autenticación (implementado en `JwtUtil`).
 
-
+### Dependencias/servicios del entorno
+- **Maven**: Gestión de dependencias y construcción del proyecto (`pom.xml`).
+- **SMTP externo**: Cualquier proveedor SMTP configurado para envíos si no se usa Resend.
