@@ -35,6 +35,9 @@ public class FileStorageService {
     @Value("${supabase.storage.bucket:hurios-media}")
     private String supabaseStorageBucket;
 
+    @Value("${spring.profiles.active:}")
+    private String activeProfiles;
+
     public FileStorageService() {
         this.httpClient = HttpClient.newBuilder()
                 .connectTimeout(Duration.ofSeconds(15))
@@ -55,6 +58,10 @@ public class FileStorageService {
 
         if (isSupabaseStorageConfigured()) {
             return uploadToSupabase(file, supabaseFolder + "/" + uniqueFilename, uniqueFilename);
+        }
+
+        if (isProdProfile()) {
+            throw new IOException("Supabase Storage no configurado en produccion. Configura SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY y SUPABASE_STORAGE_BUCKET.");
         }
 
         logger.warn("Supabase Storage no configurado. Se usa almacenamiento local para {}", uniqueFilename);
@@ -103,6 +110,10 @@ public class FileStorageService {
         return supabaseUrl != null && !supabaseUrl.trim().isEmpty()
                 && supabaseServiceRoleKey != null && !supabaseServiceRoleKey.trim().isEmpty()
                 && supabaseStorageBucket != null && !supabaseStorageBucket.trim().isEmpty();
+    }
+
+    private boolean isProdProfile() {
+        return activeProfiles != null && activeProfiles.toLowerCase().contains("prod");
     }
 
     private String buildUniqueFilename(String originalFilename) {
