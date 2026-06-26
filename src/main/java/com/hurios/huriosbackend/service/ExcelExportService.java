@@ -1,5 +1,9 @@
 package com.hurios.huriosbackend.service;
 
+
+import com.hurios.huriosbackend.entity.Sale;
+import com.hurios.huriosbackend.entity.SaleItem;
+import com.hurios.huriosbackend.repository.SaleRepository;
 import com.hurios.huriosbackend.entity.Product;
 import com.hurios.huriosbackend.entity.User;
 import com.hurios.huriosbackend.repository.ProductRepository;
@@ -28,10 +32,15 @@ public class ExcelExportService {
 
     private final UserRepository userRepository;
     private final ProductRepository productRepository;
+    private final SaleRepository saleRepository;
 
-    public ExcelExportService(UserRepository userRepository, ProductRepository productRepository) {
+    public ExcelExportService(
+            UserRepository userRepository,
+            ProductRepository productRepository,
+            SaleRepository saleRepository) {
         this.userRepository = userRepository;
         this.productRepository = productRepository;
+        this.saleRepository = saleRepository;
     }
 
     /**
@@ -155,42 +164,181 @@ public class ExcelExportService {
     }
 
     /**
-     * Exportar ventas a Excel (placeholder - necesita implementación de entidad Sale)
+     * Exportar ventas a Excel
      */
     public byte[] exportSales() throws IOException {
+        List<Sale> sales = saleRepository.findAll();
+
         try (Workbook workbook = new XSSFWorkbook()) {
+
             Sheet sheet = workbook.createSheet("Ventas");
 
             // Agregar logo
             addLogo((XSSFWorkbook) workbook, sheet);
 
-            // Estilo para el header
+            // Estilos
             CellStyle headerStyle = createHeaderStyle(workbook);
             CellStyle dataStyle = createDataStyle(workbook);
+            CellStyle currencyStyle = createCurrencyStyle(workbook);
 
-            // Crear header (empezar en fila 4 para dejar espacio al logo)
+            // Header
             Row headerRow = sheet.createRow(4);
-            String[] columns = {"ID", "Cliente", "Producto", "Cantidad", "Precio Total", "Fecha"};
-            
+
+            String[] columns = {
+                    "ID",
+                    "Cliente",
+                    "Producto",
+                    "Cantidad",
+                    "Precio Total",
+                    "Fecha"
+            };
+
             for (int i = 0; i < columns.length; i++) {
                 Cell cell = headerRow.createCell(i);
                 cell.setCellValue(columns[i]);
                 cell.setCellStyle(headerStyle);
             }
 
-            // TODO: Cuando implementes la entidad Sale, agregar los datos aquí
-            // Por ahora, solo creamos el archivo vacío con headers
-            Row dataRow = sheet.createRow(5);
-            createCell(dataRow, 0, "Sin ventas registradas", dataStyle);
+            int rowNum = 5;
 
-            // Auto-ajustar columnas
+            DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm");
+
+            if (sales.isEmpty()) {
+
+                Row row = sheet.createRow(rowNum);
+
+                createCell(row, 0, "Sin ventas registradas", dataStyle);
+
+            } else {
+
+                for (Sale sale : sales) {
+
+                    // Si la venta no tiene productos
+                    if (sale.getItems() == null || sale.getItems().isEmpty()) {
+
+                        Row row = sheet.createRow(rowNum++);
+
+                        createCell(
+                                row,
+                                0,
+                                sale.getId() != null ? sale.getId().toString() : "",
+                                dataStyle);
+
+                        createCell(
+                                row,
+                                1,
+                                sale.getFullName() != null
+                                        ? sale.getFullName()
+                                        : "",
+                                dataStyle);
+
+                        createCell(
+                                row,
+                                2,
+                                "",
+                                dataStyle);
+
+                        createCell(
+                                row,
+                                3,
+                                "",
+                                dataStyle);
+
+                        Cell totalCell = row.createCell(4);
+
+                        totalCell.setCellValue(
+                                sale.getTotal() != null
+                                        ? sale.getTotal()
+                                        : 0);
+
+                        totalCell.setCellStyle(currencyStyle);
+
+                        createCell(
+                                row,
+                                5,
+                                sale.getCreatedAt() != null
+                                        ? sale.getCreatedAt().format(formatter)
+                                        : "",
+                                dataStyle);
+
+                        continue;
+                    }
+
+                    // Una fila por cada producto vendido
+                    for (SaleItem item : sale.getItems()) {
+
+                        Row row = sheet.createRow(rowNum++);
+
+                        // ID
+                        createCell(
+                                row,
+                                0,
+                                sale.getId() != null
+                                        ? sale.getId().toString()
+                                        : "",
+                                dataStyle);
+
+                        // Cliente
+                        createCell(
+                                row,
+                                1,
+                                sale.getFullName() != null
+                                        ? sale.getFullName()
+                                        : "",
+                                dataStyle);
+
+                        // Producto
+                        createCell(
+                                row,
+                                2,
+                                item.getProduct() != null
+                                        ? item.getProduct().getName()
+                                        : "",
+                                dataStyle);
+
+                        // Cantidad
+                        createCell(
+                                row,
+                                3,
+                                item.getQuantity() != null
+                                        ? item.getQuantity().toString()
+                                        : "0",
+                                dataStyle);
+
+                        // Precio Total
+                        Cell totalCell = row.createCell(4);
+
+                        totalCell.setCellValue(
+                                sale.getTotal() != null
+                                        ? sale.getTotal()
+                                        : 0);
+
+                        totalCell.setCellStyle(currencyStyle);
+
+                        // Fecha
+                        createCell(
+                                row,
+                                5,
+                                sale.getCreatedAt() != null
+                                        ? sale.getCreatedAt().format(formatter)
+                                        : "",
+                                dataStyle);
+
+                    }
+
+                }
+
+            }
+
+            // Ajustar columnas
             for (int i = 0; i < columns.length; i++) {
                 sheet.autoSizeColumn(i);
             }
 
-            // Convertir a bytes
             ByteArrayOutputStream outputStream = new ByteArrayOutputStream();
+
             workbook.write(outputStream);
+
             return outputStream.toByteArray();
         }
     }
