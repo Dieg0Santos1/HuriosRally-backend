@@ -10,14 +10,16 @@ import java.util.Optional;
 
 @Repository
 public interface SaleRepository extends JpaRepository<Sale, Long> {
-    @EntityGraph(attributePaths = {"user", "items", "items.product"})
     List<Sale> findByUserId(Long userId);
 
-    @EntityGraph(attributePaths = {"user", "items", "items.product"})
+    List<Sale> findByStatus(String status);
+
+    @Override
+    @EntityGraph(attributePaths = {
+            "items",
+            "items.product",
+            "user"
+    })
     List<Sale> findAll();
 
-    @EntityGraph(attributePaths = {"user", "items", "items.product"})
-    Optional<Sale> findById(Long id);
-
-    List<Sale> findByStatus(String status);
 }
