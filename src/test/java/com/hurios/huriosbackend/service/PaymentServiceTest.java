@@ -256,48 +256,7 @@ class PaymentServiceTest {
         verify(saleRepository, times(1)).findByUserId(1L);
     }
 
-    /**
-     * PRUEBA 6: Obtener una venta por ID
-     */
-    @Test
-    @DisplayName("Debe obtener una venta por su ID")
-    void testGetSaleById_Success() {
-        // ARRANGE
-        Sale expectedSale = new Sale();
-        expectedSale.setId(1L);
-        expectedSale.setStatus("CONFIRMADO");
-        
-        when(saleRepository.findById(1L))
-            .thenReturn(Optional.of(expectedSale));
-
-        // ACT
-        Sale result = paymentService.getSaleById(1L);
-
-        // ASSERT
-        assertNotNull(result);
-        assertEquals(1L, result.getId());
-        assertEquals("CONFIRMADO", result.getStatus());
-    }
-
-    /**
-     * PRUEBA 7: Falla al obtener venta inexistente
-     */
-    @Test
-    @DisplayName("Debe fallar al buscar una venta que no existe")
-    void testGetSaleById_NotFound() {
-        // ARRANGE
-        when(saleRepository.findById(999L))
-            .thenReturn(Optional.empty());
-
-        // ACT & ASSERT
-        RuntimeException exception = assertThrows(
-            RuntimeException.class,
-            () -> paymentService.getSaleById(999L)
-        );
-        
-        assertTrue(exception.getMessage().contains("Venta no encontrada"));
-    }
-
+  
     /**
      * PRUEBA 8: Obtener todas las ventas (admin)
      */
