@@ -166,8 +166,8 @@ public class ProductService {
             throw new IllegalArgumentException("El umbral debe ser mayor o igual a 0");
         }
         return repo.findAll().stream()
-                .filter(p -> {
-                    int stock = p.getStock() != null ? p.getStock() : 0;
+                .filter(product -> {
+                    int stock = product.getStock() != null ? product.getStock() : 0;
                     return stock <= threshold;
                 })
                 .collect(Collectors.toList());

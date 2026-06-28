@@ -26,18 +26,6 @@ public class ProductController {
         this.validationService = validationService;
         this.productService=productService;
     }
-    @GetMapping("/low-stock")
-    public ResponseEntity<List<Product>> getLowStockProducts(
-            @RequestParam(defaultValue = "5") int threshold) {
-        List<Product> products = productService.getLowStockProducts(threshold);
-        return ResponseEntity.ok(products);
-    }
-
-    @GetMapping("/out-of-stock")
-    public ResponseEntity<List<Product>> getOutOfStockProducts() {
-        List<Product> products = productService.getOutOfStockProducts();
-        return ResponseEntity.ok(products);
-    }
     // GET /products -> Lista de todos los productos
     @GetMapping
     public ResponseEntity<?> all() {
