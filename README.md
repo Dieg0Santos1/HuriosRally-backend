@@ -1,85 +1,150 @@
 # HuriosRally Backend
 
-Base del backend en Spring Boot para que el equipo clone `main` y empiece a implementar sobre una estructura ya creada.
+Backend en Spring Boot para la plataforma Hurios Rally. El proyecto ya incluye la base funcional para autenticación, gestión de usuarios, productos, ventas, exportaciones, carga de imágenes y respaldos.
 
-Incluye:
-- estructura de carpetas del backend
-- `pom.xml` con dependencias base
-- Maven Wrapper (`mvnw`, `mvnw.cmd`, `.mvn`)
-- clase principal de Spring Boot
-- `application.properties` inicial
+## Qué hace
 
-No incluye codigo de negocio ni credenciales reales.
+- Autenticación con JWT, registro de usuarios y recuperación de contraseña.
+- Gestión de perfil de usuario y carga de imagen de perfil.
+- CRUD de productos y actualización de stock.
+- Registro y consulta de ventas y órdenes del usuario.
+- Exportación de clientes, productos y ventas a Excel.
+- Subida de imágenes a almacenamiento local o Supabase Storage.
+- Generación de respaldos de configuración.
+- Documentación Swagger/OpenAPI y endpoint público de estado.
+- Métricas del backend con Actuator.
 
-## APIs utilizadas
+## Tecnologías y servicios
 
-A continuación se listan las APIs y servicios utilizados por el proyecto, agrupadas por tipo, con una breve descripción de qué hace cada una.
+- Spring Boot 3.5.6
+- Java 17
+- Spring Security
+- Spring Data JPA
+- PostgreSQL
+- H2 para desarrollo local
+- Springdoc OpenAPI / Swagger UI
+- JJWT para tokens JWT
+- Apache POI para exportación a Excel
+- Spring Mail para correos
+- Micrometer y Actuator para observabilidad
+- Supabase para base de datos y almacenamiento, cuando está configurado
 
-### APIs externas / servicios terceros
-- **Supabase (Postgres + Storage)**: Base de datos PostgreSQL hospedada en Supabase y servicio de almacenamiento (Storage) usado para guardar imágenes y archivos. El servicio se llama mediante llamadas HTTP a la API de Storage desde `FileStorageService`.
-- **Resend (resend.com) / SMTP**: Servicio preferente para envío de correos vía API (`Resend`). Si no está configurado, el proyecto usa SMTP (configurable en `application.properties`) mediante `JavaMailSender` en `EmailService`.
-- **Micrometer / Prometheus**: Biblioteca de métricas (`io.micrometer`) usada para instrumentar métricas de negocio y exponerlas para Prometheus/Grafana (configuración en `MetricsConfiguration`).
-- **OpenAPI / Swagger (springdoc-openapi)**: Generación de especificación OpenAPI y UI Swagger para la API REST (configurada en `OpenApiConfig`).
-- **jjwt (JSON Web Tokens)**: Librería `io.jsonwebtoken` para generación y validación de JWT usados en autenticación (implementado en `JwtUtil`).
+## Funcionalidad expuesta
 
-### Dependencias/servicios del entorno
-- **Maven**: Gestión de dependencias y construcción del proyecto (`pom.xml`).
-- **SMTP externo**: Cualquier proveedor SMTP configurado para envíos si no se usa Resend.
+### Autenticación
+- `POST /auth/register`: crea un usuario nuevo.
+- `POST /auth/login`: autentica y devuelve acceso.
+- `POST /auth/send-verification-code`: envía código de verificación.
+- `POST /auth/verify-code`: valida el código y confirma la sesión.
+- `POST /auth/request-password-reset`: inicia recuperación de contraseña.
+- `POST /auth/reset-password`: restablece la contraseña.
 
-### Endpoints REST principales (API del backend)
-Las rutas principales expuestas por el backend y una breve descripción de cada una:
-- **/auth**: Endpoints de autenticación y gestión de usuarios (registro, login, envío/verificación de códigos, reinicio de contraseña). Controlador: `AuthController`.
-- **/payments**: Endpoints para procesar pagos y consultar ventas. Manejo de ventas y registro de `Sale` en base de datos (no integra directamente un gateway de pagos en el backend; `PaymentService` registra la transacción). Controlador: `PaymentController`.
-- **/api/images**: Endpoint para subir imágenes (`POST /api/images/upload`). Usa `FileStorageService` para subir a Supabase Storage o almacenamiento local.
-- **/products**: Endpoints para gestión de productos (crear, listar, actualizar, eliminar) - Controlador: `ProductController`.
-- **/user**: Endpoints para gestión del perfil del usuario autenticado - Controlador: `UserController`.
-- **/export**: Endpoints para exportar datos en Excel (`/export/clients`, `/export/products`, `/export/sales`). Controlador: `ExportController`.
-- **/backup**: Endpoint para crear backups de configuración (`POST /backup/config`). Controlador: `BackupController`.
-- **/health-public** y **/**: Endpoints públicos para comprobar salud/estado (Controlador: `PublicStatusController`).
+### Usuarios
+- `GET /user/profile`: obtiene el perfil autenticado.
+- `PUT /user/profile`: actualiza datos del perfil.
+- `POST /user/profile-image`: sube la imagen del perfil.
 
-## Lista de APIs creadas (Swagger)
+### Productos
+- `GET /products`: lista productos.
+- `POST /products`: crea un producto.
+- `GET /products/{id}`: consulta un producto.
+- `PUT /products/{id}`: actualiza un producto.
+- `DELETE /products/{id}`: elimina un producto.
+- `PUT /products/{id}/add-stock`: incrementa stock.
+- `GET /products/search`: busca por nombre.
 
-Listado de endpoints visibles en Swagger UI, agrupados por controlador:
+### Pagos y ventas
+- `POST /payments/process`: procesa una compra y registra la venta.
+- `GET /payments/{id}`: consulta una venta.
+- `GET /payments/my-orders`: lista órdenes del usuario autenticado.
+- `GET /payments/all`: lista todas las ventas.
 
-### user-controller
-- `GET /user/profile`: Obtiene el perfil del usuario autenticado desde su token JWT.
-- `PUT /user/profile`: Actualiza datos del perfil (nombre, teléfono, dirección o imagen).
-- `POST /user/profile-image`: Sube una nueva imagen de perfil y la asocia al usuario.
+### Carga y exportación
+- `POST /api/images/upload`: sube una imagen y devuelve su URL pública.
+- `GET /export/clients`: exporta clientes a Excel.
+- `GET /export/products`: exporta productos a Excel.
+- `GET /export/sales`: exporta ventas a Excel.
 
-### product-controller
-- `GET /products/{id}`: Devuelve el detalle de un producto por su ID.
-- `PUT /products/{id}`: Actualiza información de un producto existente.
-- `DELETE /products/{id}`: Elimina un producto por su ID.
-- `PUT /products/{id}/add-stock`: Incrementa el stock disponible de un producto.
-- `GET /products`: Lista todos los productos registrados.
-- `POST /products`: Crea un nuevo producto en el inventario.
-- `GET /products/search`: Busca productos por nombre usando el parámetro `q`.
+### Otros
+- `POST /backup/config`: genera un respaldo de archivos de configuración.
+- `GET /health-public`: verifica que el servicio está en línea.
+- `GET /`: estado básico público.
 
-### payment-controller
-- `POST /payments/process`: Procesa una compra y registra la venta para el usuario autenticado.
-- `GET /payments/{id}`: Consulta una venta específica por su ID.
-- `GET /payments/my-orders`: Lista las órdenes/ventas del usuario autenticado.
-- `GET /payments/all`: Lista todas las ventas registradas (uso administrativo).
+## Requisitos
 
-### backup-controller
-- `POST /backup/config`: Genera un respaldo de archivos de configuración del backend.
+- Java 17
+- Maven 3.9+ o el Maven Wrapper incluido
+- Base de datos disponible si no usas el perfil local con H2
+- Opcional: Supabase, Resend o un servidor SMTP según el entorno
 
-### auth-controller
-- `POST /auth/verify-code`: Valida el código de verificación y devuelve sesión/JWT si es correcto.
-- `POST /auth/send-verification-code`: Envía un código de verificación al correo del usuario.
-- `POST /auth/reset-password`: Restablece la contraseña usando token de recuperación.
-- `POST /auth/request-password-reset`: Solicita el inicio del flujo de recuperación de contraseña.
-- `POST /auth/register`: Registra un nuevo usuario en la plataforma.
-- `POST /auth/login`: Autentica al usuario y devuelve respuesta de acceso.
+## Configuración
 
-### image-upload-controller
-- `POST /api/images/upload`: Sube una imagen de producto y devuelve su URL pública.
+El proyecto arranca por defecto con el perfil `local`.
 
-### public-status-controller
-- `GET /health-public`: Endpoint público para verificar que el backend está en línea.
-- `GET /`: Endpoint raíz público que devuelve estado básico del servicio.
+### Variables importantes
+- `PORT`: puerto HTTP del servidor, por defecto `8080`.
+- `SPRING_PROFILES_ACTIVE`: perfil activo, por defecto `local`.
+- `JWT_SECRET`: secreto para firmar tokens.
+- `JWT_EXPIRATION_MINUTES`: duración del token en minutos.
+- `APP_FRONTEND_URL`: URL del frontend autorizado.
+- `APP_CORS_ALLOWED_ORIGINS`: orígenes permitidos por CORS.
+- `MAIL_HOST`, `MAIL_PORT`, `MAIL_USERNAME`, `MAIL_PASSWORD`: configuración SMTP.
+- `RESEND_API_KEY`: clave para envío de correos con Resend.
+- `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `SUPABASE_STORAGE_BUCKET`: configuración de Supabase.
+- `BACKUP_BASE_PATH`: ruta base para respaldos.
 
-### export-controller
-- `GET /export/sales`: Exporta las ventas a un archivo Excel descargable.
-- `GET /export/products`: Exporta los productos a un archivo Excel descargable.
-- `GET /export/clients`: Exporta los clientes a un archivo Excel descargable.
+### Perfil local
+
+Con `application-local.properties` el proyecto usa H2 en archivo local y activa la consola H2 en `/h2-console`.
+
+## Cómo ejecutar
+
+### Opción 1: Desarrollo local con Maven Wrapper
+
+```bash
+./mvnw spring-boot:run
+```
+
+En Windows:
+
+```bash
+mvnw.cmd spring-boot:run
+```
+
+### Opción 2: Compilar y ejecutar el JAR
+
+```bash
+./mvnw clean package -DskipTests
+java -jar target/huriosbackend-0.0.1-SNAPSHOT.jar
+```
+
+En Windows:
+
+```bash
+mvnw.cmd clean package -DskipTests
+java -jar target/huriosbackend-0.0.1-SNAPSHOT.jar
+```
+
+### Opción 3: Con Docker
+
+```bash
+docker build -t huriosbackend .
+docker run --rm -p 8080:8080 -e SPRING_PROFILES_ACTIVE=prod huriosbackend
+```
+
+## URLs útiles
+
+- Aplicación: `http://localhost:8080`
+- Swagger UI: `http://localhost:8080/documentacion`
+- Actuator health: `http://localhost:8080/actuator/health`
+- Consola H2: `http://localhost:8080/h2-console`
+
+## Documentación adicional
+
+- `TESTING_README.md`: guía para ejecutar pruebas unitarias.
+- `METRICS_USAGE_EXAMPLE.md`: ejemplo de uso de métricas.
+
+## Notas
+
+- El proyecto no incluye credenciales reales.
+- Para entorno productivo, configura correctamente la base de datos, el correo saliente y las claves de Supabase antes de desplegar.
