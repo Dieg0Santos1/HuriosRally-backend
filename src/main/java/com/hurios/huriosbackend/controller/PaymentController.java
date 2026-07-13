@@ -89,29 +89,4 @@ public class PaymentController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
         }
     }
-
-    @GetMapping("/{id}")
-    public ResponseEntity<?> getSaleById(
-            @PathVariable Long id,
-            Authentication authentication
-    ) {
-        try {
-            if (authentication == null || !authentication.isAuthenticated()) {
-                Map<String, String> error = new HashMap<>();
-                error.put("error", "Usuario no autenticado");
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(error);
-            }
-
-            Sale sale = paymentService.getSaleById(id);
-            return ResponseEntity.ok(sale);
-        } catch (RuntimeException e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", e.getMessage());
-            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(error);
-        } catch (Exception e) {
-            Map<String, String> error = new HashMap<>();
-            error.put("error", "Error al obtener la venta: " + e.getMessage());
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(error);
-        }
-    }
 }

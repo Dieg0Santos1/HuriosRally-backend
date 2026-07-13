@@ -1,22 +1,27 @@
 package com.hurios.huriosbackend.service;
 
+import com.hurios.huriosbackend.config.JwtUtil;
+import com.hurios.huriosbackend.entity.EmailVerificationCode;
+import com.hurios.huriosbackend.entity.PasswordReset;
+import com.hurios.huriosbackend.entity.User;
+import com.hurios.huriosbackend.repository.EmailVerificationCodeRepository;
+import com.hurios.huriosbackend.repository.PasswordResetRepository;
+import com.hurios.huriosbackend.repository.UserRepository;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
-import org.springframework.beans.factory.annotation.Value;
 
-import com.hurios.huriosbackend.config.JwtUtil;
-import com.hurios.huriosbackend.entity.*;
-import com.hurios.huriosbackend.repository.*;
-
+import java.nio.charset.StandardCharsets;
 import java.time.LocalDateTime;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
-import java.util.Map;
 
 /*
- * AuthService: encapsula la lógica de registro, login, verificación por email
- * y reset de contraseña. Ahora genera un JWT tras login exitoso.
+ * AuthService: encapsula la logica de registro, login, verificacion por email
+ * y reset de contrasena. Genera un JWT tras login exitoso.
  */
 @Service
 public class AuthService {
@@ -45,74 +50,78 @@ public class AuthService {
         this.passwordEncoder = passwordEncoder;
     }
 
-    // Registro: crea usuario, guarda hash de password y envía código de verificación
     @Transactional
     public String register(String email, String password, String fullName, String phone) throws Exception {
         Optional<User> existing = userRepo.findByEmail(email);
         if (existing.isPresent()) {
-            return "Correo ya registrado";
+            return "Correo ya registrado.Regístrese con otro correo.";
         }
+
         User user = new User();
         user.setEmail(email);
-        user.setPasswordHash(passwordEncoder.encode(password)); // hashear contraseña
-        user.setFullName(fullName); // guardar nombre completo
-        user.setPhone(phone); // guardar teléfono
-        user.setRole("CLIENTE"); // todos los registros nuevos son CLIENTE
+        user.setPasswordHash(passwordEncoder.encode(password));
+        user.setFullName(fullName);
+        user.setPhone(phone);
+        user.setRole("CLIENTE");
         user.setVerified(false);
         userRepo.save(user);
 
-        // crear código 6 dígitos con expiración 15 minutos
-        String code = String.valueOf((int)(100000 + Math.random() * 900000));
+        String code = String.valueOf((int) (100000 + Math.random() * 900000));
         EmailVerificationCode ev = new EmailVerificationCode();
         ev.setUser(user);
         ev.setCode(code);
         ev.setExpiresAt(LocalDateTime.now().plusMinutes(15));
         codeRepo.save(ev);
 
-        // enviar correo con el código
         String html = buildVerificationEmail(fullName, code);
-        emailService.sendHtml(email, "Código de verificación - Hurios Rally", html, true);
+        emailService.sendHtml(email, "Codigo de verificación - Hurios Rally", html, true);
 
         return "Usuario creado. Revisa tu email para verificar.";
     }
 
-    // Login: valida credenciales; si isVerified==false devuelve "not_verified";
-    // si todo OK, genera JWT y devuelve mapa con message y token.
-    // Ahora también valida que el rol coincida
     public Map<String, Object> login(String email, String password, String expectedRole) {
         Optional<User> op = userRepo.findByEmail(email);
-        if (op.isEmpty()) return Map.of("ok", false, "message", "Usuario no encontrado");
-        User user = op.get();
-
-        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            return Map.of("ok", false, "message", "Contraseña incorrecta");
+        if (op.isEmpty()) {
+            return Map.of("ok", false, "message", "Usuario no encontrado.Recargue la página par volver a intentar el login");
         }
 
-        // Validar que el rol del usuario coincida con el esperado
-        if (expectedRole != null && !expectedRole.equals(user.getRole())) {
-            String actualRole = user.getRole();
+        User user = op.get();
+        String actualRole = normalizeRole(user.getRole());
+
+        if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
+            return Map.of("ok", false, "message", "La cuenta no tiene una contraseña configurada.Recargue la página par volver a intentar el login");
+        }
+
+        if (!passwordEncoder.matches(password, user.getPasswordHash())) {
+            return Map.of("ok", false, "message", "Contraseña incorrecta. Recargue la página par volver a intentar el login");
+        }
+
+        if (expectedRole != null && !expectedRole.isBlank() && !expectedRole.equals(actualRole)) {
             return Map.of("ok", false, "message", "Su correo es de perfil " + actualRole);
         }
 
         if (!user.isVerified()) {
-            return Map.of("ok", false, "message", "not_verified");
+            return Map.of("ok", false, "message", "El usuario no está verificado.");
         }
 
-        // Generar JWT con subject = email del usuario
-        String subject = user.getEmail();
-        String token = jwtUtil.generateToken(subject);
+        String token = jwtUtil.generateToken(user.getEmail());
 
-        // devolver token, mensaje OK y rol
-        return Map.of("ok", true, "message", "Login exitoso", "token", token, "role", user.getRole());
+        Map<String, Object> response = new HashMap<>();
+        response.put("ok", true);
+        response.put("message", "Login exitoso");
+        response.put("token", token);
+        response.put("role", actualRole);
+        return response;
     }
 
-    // Enviar nuevo código de verificación al email
     public String sendVerificationCode(String email) throws Exception {
         Optional<User> op = userRepo.findByEmail(email);
-        if (op.isEmpty()) return "Usuario no encontrado";
-        User user = op.get();
+        if (op.isEmpty()) {
+            return "Usuario no encontrado";
+        }
 
-        String code = String.valueOf((int)(100000 + Math.random() * 900000));
+        User user = op.get();
+        String code = String.valueOf((int) (100000 + Math.random() * 900000));
         EmailVerificationCode ev = new EmailVerificationCode();
         ev.setUser(user);
         ev.setCode(code);
@@ -124,20 +133,27 @@ public class AuthService {
         return "Código enviado";
     }
 
-    // Verificar código: marca el usuario como verificado si el código existe y no expiró
     @Transactional
     public String verifyCode(String email, String code) {
         Optional<User> op = userRepo.findByEmail(email);
-        if (op.isEmpty()) return "Usuario no encontrado";
-        User user = op.get();
+        if (op.isEmpty()) {
+            return "Usuario no encontrado";
+        }
 
-        Optional<EmailVerificationCode> rec = codeRepo.findTopByUserAndCodeAndExpiresAtAfterOrderByCreatedAtDesc(user, code, LocalDateTime.now());
-        if (rec.isEmpty()) return "Código inválido o expirado";
+        User user = op.get();
+        Optional<EmailVerificationCode> rec =
+                codeRepo.findTopByUserAndCodeAndExpiresAtAfterOrderByCreatedAtDesc(
+                        user,
+                        code,
+                        LocalDateTime.now()
+                );
+
+        if (rec.isEmpty()) {
+            return "Código inválido o expirado";
+        }
 
         user.setVerified(true);
         userRepo.save(user);
-
-        // eliminar códigos antiguos
         codeRepo.deleteByUser(user);
         return "Email verificado";
     }
@@ -156,21 +172,21 @@ public class AuthService {
 
         User user = userOpt.get();
         String token = jwtUtil.generateToken(user.getEmail());
-        return Map.of(
-                "ok", true,
-                "message", "Email verificado",
-                "token", token,
-                "role", user.getRole()
-        );
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("ok", true);
+        response.put("message", "Email verificado");
+        response.put("token", token);
+        response.put("role", normalizeRole(user.getRole()));
+        return response;
     }
 
-    // Solicitar reset: crear token (UUID), guardar y enviar link al frontend
     public String requestPasswordReset(String email) throws Exception {
         Optional<User> op = userRepo.findByEmail(email);
         if (op.isEmpty()) {
-            // por seguridad devolvemos mensaje genérico
-            return "Si el email existe, se envió un correo";
+            return "Si el email existe, se le envió un correo a esa dirección";
         }
+
         User user = op.get();
         String token = UUID.randomUUID().toString();
         PasswordReset pr = new PasswordReset();
@@ -179,50 +195,64 @@ public class AuthService {
         pr.setExpiresAt(LocalDateTime.now().plusHours(1));
         resetRepo.save(pr);
 
-        String link = frontendUrl() + "/new-password?token=" + token + "&email=" + java.net.URLEncoder.encode(email, java.nio.charset.StandardCharsets.UTF_8);
-        String html = "<p>Haz clic para restablecer tu contraseña: <a href=\"" + link + "\">Restablecer contraseña</a></p>";
+        String link = frontendUrl() + "/new-password?token=" + token + "&email="
+                + java.net.URLEncoder.encode(email, StandardCharsets.UTF_8);
+        String html = "<p>Haz clic para restablecer tu contraseña: <a href=\"" + link
+                + "\">Restablecer contraseña</a></p>";
+
         try {
             emailService.sendHtml(email, "Reiniciar contraseña", html);
         } catch (Exception e) {
-            // Log del error pero continuar el flujo para desarrollo
             System.err.println("Error sending email: " + e.getMessage());
             System.out.println("Reset link (for development): " + link);
         }
-        return "Si el email existe, se envió un correo";
+
+        return "Si el email existe, se le envió un correo a esa dirección";
     }
 
-    // Resetear contraseña usando token
     @Transactional
     public String resetPassword(String email, String token, String newPassword) {
         Optional<User> op = userRepo.findByEmail(email);
-        if (op.isEmpty()) return "Usuario no encontrado";
+        if (op.isEmpty()) {
+            return "Usuario no encontrado.";
+        }
+
         User user = op.get();
+        Optional<PasswordReset> rec =
+                resetRepo.findTopByUserAndTokenAndExpiresAtAfterAndUsedFalseOrderByCreatedAtDesc(
+                        user,
+                        token,
+                        LocalDateTime.now()
+                );
 
-        Optional<PasswordReset> rec = resetRepo.findTopByUserAndTokenAndExpiresAtAfterAndUsedFalseOrderByCreatedAtDesc(user, token, LocalDateTime.now());
-        if (rec.isEmpty()) return "Token inválido o expirado";
+        if (rec.isEmpty()) {
+            return "Token inválido o expirado.";
+        }
 
-        // actualizar contraseña (hashear)
         user.setPasswordHash(passwordEncoder.encode(newPassword));
         userRepo.save(user);
 
-        // marcar token como usado
         PasswordReset pr = rec.get();
         pr.setUsed(true);
         resetRepo.save(pr);
 
-        return "Contraseña actualizada";
+        return "Contraseña actualizada.";
     }
 
-    // helper para construir frontend url (inyectada desde properties)
     private String frontendUrl() {
-        // devuelve frontendUrl si existe; evita NPE si no se inyectó (use default)
         if (this.frontendUrl == null || this.frontendUrl.isBlank()) {
             return "http://localhost:5173";
         }
         return this.frontendUrl;
     }
 
-    // Template HTML para email de verificación
+    private String normalizeRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "CLIENTE";
+        }
+        return role;
+    }
+
     private String buildVerificationEmail(String userName, String code) {
         return "<!DOCTYPE html>" +
             "<html>" +
@@ -246,7 +276,7 @@ public class AuthService {
             "<body>" +
             "<div class='container'>" +
             "<div class='content'>" +
-            "<h1>¡Bienvenido, " + userName + "!</h1>" +
+            "<h1>Bienvenido, " + userName + "!</h1>" +
             "<p>Gracias por registrarte en nuestra aplicación. Para activar tu cuenta, utiliza el siguiente código OTP:</p>" +
             "<div class='code-box'>" +
             "<div class='code'>" + code + "</div>" +
