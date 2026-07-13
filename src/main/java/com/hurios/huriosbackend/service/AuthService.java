@@ -54,7 +54,7 @@ public class AuthService {
     public String register(String email, String password, String fullName, String phone) throws Exception {
         Optional<User> existing = userRepo.findByEmail(email);
         if (existing.isPresent()) {
-            return "Correo ya registrado";
+            return "Correo ya registrado.Regístrese con otro correo.";
         }
 
         User user = new User();
@@ -74,7 +74,7 @@ public class AuthService {
         codeRepo.save(ev);
 
         String html = buildVerificationEmail(fullName, code);
-        emailService.sendHtml(email, "Codigo de verificacion - Hurios Rally", html, true);
+        emailService.sendHtml(email, "Codigo de verificación - Hurios Rally", html, true);
 
         return "Usuario creado. Revisa tu email para verificar.";
     }
@@ -82,18 +82,18 @@ public class AuthService {
     public Map<String, Object> login(String email, String password, String expectedRole) {
         Optional<User> op = userRepo.findByEmail(email);
         if (op.isEmpty()) {
-            return Map.of("ok", false, "message", "Usuario no encontrado");
+            return Map.of("ok", false, "message", "Usuario no encontrado.Recargue la página par volver a intentar el login");
         }
 
         User user = op.get();
         String actualRole = normalizeRole(user.getRole());
 
         if (user.getPasswordHash() == null || user.getPasswordHash().isBlank()) {
-            return Map.of("ok", false, "message", "La cuenta no tiene contrasena configurada");
+            return Map.of("ok", false, "message", "La cuenta no tiene una contraseña configurada.Recargue la página par volver a intentar el login");
         }
 
         if (!passwordEncoder.matches(password, user.getPasswordHash())) {
-            return Map.of("ok", false, "message", "Contrasena incorrecta");
+            return Map.of("ok", false, "message", "Contraseña incorrecta. Recargue la página par volver a intentar el login");
         }
 
         if (expectedRole != null && !expectedRole.isBlank() && !expectedRole.equals(actualRole)) {
@@ -101,7 +101,7 @@ public class AuthService {
         }
 
         if (!user.isVerified()) {
-            return Map.of("ok", false, "message", "not_verified");
+            return Map.of("ok", false, "message", "El usuario no está verificado.");
         }
 
         String token = jwtUtil.generateToken(user.getEmail());
@@ -129,8 +129,8 @@ public class AuthService {
         codeRepo.save(ev);
 
         String html = buildVerificationEmail(user.getFullName(), code);
-        emailService.sendHtml(email, "Codigo de verificacion - Hurios Rally", html, true);
-        return "Codigo enviado";
+        emailService.sendHtml(email, "Código de verificación - Hurios Rally", html, true);
+        return "Código enviado";
     }
 
     @Transactional
@@ -149,7 +149,7 @@ public class AuthService {
                 );
 
         if (rec.isEmpty()) {
-            return "Codigo invalido o expirado";
+            return "Código inválido o expirado";
         }
 
         user.setVerified(true);
@@ -184,7 +184,7 @@ public class AuthService {
     public String requestPasswordReset(String email) throws Exception {
         Optional<User> op = userRepo.findByEmail(email);
         if (op.isEmpty()) {
-            return "Si el email existe, se envio un correo";
+            return "Si el email existe, se le envió un correo a esa dirección";
         }
 
         User user = op.get();
@@ -197,24 +197,24 @@ public class AuthService {
 
         String link = frontendUrl() + "/new-password?token=" + token + "&email="
                 + java.net.URLEncoder.encode(email, StandardCharsets.UTF_8);
-        String html = "<p>Haz clic para restablecer tu contrasena: <a href=\"" + link
-                + "\">Restablecer contrasena</a></p>";
+        String html = "<p>Haz clic para restablecer tu contraseña: <a href=\"" + link
+                + "\">Restablecer contraseña</a></p>";
 
         try {
-            emailService.sendHtml(email, "Reiniciar contrasena", html);
+            emailService.sendHtml(email, "Reiniciar contraseña", html);
         } catch (Exception e) {
             System.err.println("Error sending email: " + e.getMessage());
             System.out.println("Reset link (for development): " + link);
         }
 
-        return "Si el email existe, se envio un correo";
+        return "Si el email existe, se le envió un correo a esa dirección";
     }
 
     @Transactional
     public String resetPassword(String email, String token, String newPassword) {
         Optional<User> op = userRepo.findByEmail(email);
         if (op.isEmpty()) {
-            return "Usuario no encontrado";
+            return "Usuario no encontrado.";
         }
 
         User user = op.get();
@@ -226,7 +226,7 @@ public class AuthService {
                 );
 
         if (rec.isEmpty()) {
-            return "Token invalido o expirado";
+            return "Token inválido o expirado.";
         }
 
         user.setPasswordHash(passwordEncoder.encode(newPassword));
@@ -236,7 +236,7 @@ public class AuthService {
         pr.setUsed(true);
         resetRepo.save(pr);
 
-        return "Contrasena actualizada";
+        return "Contraseña actualizada.";
     }
 
     private String frontendUrl() {
@@ -277,11 +277,11 @@ public class AuthService {
             "<div class='container'>" +
             "<div class='content'>" +
             "<h1>Bienvenido, " + userName + "!</h1>" +
-            "<p>Gracias por registrarte en nuestra aplicacion. Para activar tu cuenta, utiliza el siguiente codigo OTP:</p>" +
+            "<p>Gracias por registrarte en nuestra aplicación. Para activar tu cuenta, utiliza el siguiente código OTP:</p>" +
             "<div class='code-box'>" +
             "<div class='code'>" + code + "</div>" +
             "</div>" +
-            "<p class='warning'>Este codigo expira en 15 minutos. Por favor no lo compartas con nadie.</p>" +
+            "<p class='warning'>Este código expira en 15 minutos. Por favor no lo compartas con nadie.</p>" +
             "<div class='logo'>" +
             "<img src='cid:logo' alt='Hurios Rally' />" +
             "</div>" +

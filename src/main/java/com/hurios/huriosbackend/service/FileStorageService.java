@@ -61,7 +61,7 @@ public class FileStorageService {
         }
 
         if (isProdProfile()) {
-            throw new IOException("Supabase Storage no configurado en produccion. Configura SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY y SUPABASE_STORAGE_BUCKET.");
+            throw new IOException("Supabase Storage no configurado en producción. Configura SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY y SUPABASE_STORAGE_BUCKET.");
         }
 
         logger.warn("Supabase Storage no configurado. Se usa almacenamiento local para {}", uniqueFilename);
