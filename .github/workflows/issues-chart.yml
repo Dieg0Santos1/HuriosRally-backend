@@ -96,16 +96,22 @@ jobs:
           labels = [i[0] for i in items]
           counts = [i[1] for i in items]
 
-          plt.figure(figsize=(10, 6))
-          bars = plt.bar(labels, counts, color="#4C6EF5")
-          plt.title("Issues por tipo (label)")
-          plt.xlabel("Label")
-          plt.ylabel("Cantidad de issues")
-          plt.xticks(rotation=45, ha="right")
+          # Paleta de colores distintos por cada label
+          cmap = plt.get_cmap("tab20")
+          colors = [cmap(i % 20) for i in range(len(labels))]
 
-          for bar, count in zip(bars, counts):
-              plt.text(bar.get_x() + bar.get_width() / 2, bar.get_height(),
-                        str(count), ha="center", va="bottom")
+          plt.figure(figsize=(8, 8))
+          plt.pie(
+              counts,
+              labels=labels,
+              colors=colors,
+              autopct=lambda pct: f"{pct:.1f}%\n({int(round(pct/100*sum(counts)))})",
+              startangle=90,
+              pctdistance=0.8,
+              textprops={"fontsize": 12}
+          )
+          plt.title("Issues por tipo (label)")
+          plt.axis("equal")  # Asegura que el pie quede circular, no ovalado
 
           plt.tight_layout()
           plt.savefig("issues_por_label.png", dpi=150)
